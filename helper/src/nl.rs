@@ -1,7 +1,7 @@
 use std::net::{IpAddr, Ipv4Addr};
 
 use futures::TryStreamExt;
-use rtnetlink::{AddressMessageBuilder, LinkDummy, LinkUnspec, LinkVlan, RouteMessageBuilder, new_connection};
+use rtnetlink::{LinkDummy, LinkUnspec, LinkVlan, RouteMessageBuilder, new_connection};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Deserialize)]
@@ -220,8 +220,19 @@ impl Session {
             return Ok(false);
         };
         let (ip, prefix) = parse_cidr(cidr)?;
-        let ipv4 = ipv4(ip)?;
-        let message = AddressMessageBuilder::<Ipv4Addr>::new().index(index).address(ipv4, prefix).build();
+        let want = IpAddr::V4(ipv4(ip)?);
+        let mut listed = self.handle.address().get().set_link_index_filter(index).execute();
+        let mut found = None;
+        while let Some(message) = listed.try_next().await.map_err(|err| format!("list addresses: {err}"))? {
+            if message.header.prefix_len == prefix && address_ip(&message) == Some(want) {
+                found = Some(message);
+                break;
+            }
+        }
+        drop(listed);
+        let Some(message) = found else {
+            return Ok(false);
+        };
         match self.handle.address().del(message).execute().await {
             Ok(()) => Ok(true),
             Err(err) if missing(&err) => Ok(false),
@@ -332,15 +343,22 @@ fn missing(err: &rtnetlink::Error) -> bool {
     text.contains("no such") || text.contains("not found") || text.contains("enoent") || text.contains("esrch")
 }
 
-fn address_text(message: &netlink_packet_route::address::AddressMessage) -> Option<String> {
+fn address_ip(message: &netlink_packet_route::address::AddressMessage) -> Option<std::net::IpAddr> {
     use netlink_packet_route::address::AddressAttribute;
-    let mut ip = None;
+    let mut local = None;
+    let mut address = None;
     for attr in &message.attributes {
-        if let AddressAttribute::Address(addr) = attr {
-            ip = Some(*addr);
+        match attr {
+            AddressAttribute::Local(addr) => local = Some(*addr),
+            AddressAttribute::Address(addr) => address = Some(*addr),
+            _ => {}
         }
     }
-    let ip = ip?;
+    local.or(address)
+}
+
+fn address_text(message: &netlink_packet_route::address::AddressMessage) -> Option<String> {
+    let ip = address_ip(message)?;
     Some(format!("{ip}/{}", message.header.prefix_len))
 }
 
