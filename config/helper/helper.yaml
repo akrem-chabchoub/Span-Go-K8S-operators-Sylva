@@ -1,0 +1,58 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: span-helper
+  namespace: span-system
+  labels:
+    app: span-helper
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: span-helper
+  template:
+    metadata:
+      labels:
+        app: span-helper
+    spec:
+      containers:
+        - name: helper
+          image: span-helper:dev
+          imagePullPolicy: IfNotPresent
+          args:
+            - serve
+            - --listen
+            - 0.0.0.0:8080
+            - --link
+            - span0
+          ports:
+            - name: http
+              containerPort: 8080
+          readinessProbe:
+            httpGet:
+              path: /list
+              port: http
+            initialDelaySeconds: 1
+            periodSeconds: 5
+          securityContext:
+            capabilities:
+              add: ["NET_ADMIN"]
+          resources:
+            requests:
+              cpu: 10m
+              memory: 32Mi
+            limits:
+              memory: 128Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: span-helper
+  namespace: span-system
+spec:
+  selector:
+    app: span-helper
+  ports:
+    - name: http
+      port: 8080
+      targetPort: http

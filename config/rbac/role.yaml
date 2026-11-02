@@ -1,0 +1,38 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: span-system
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: span
+  namespace: span-system
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: span
+rules:
+  - apiGroups: ["span.dev"]
+    resources: ["segments"]
+    verbs: ["get", "list", "watch", "update", "patch"]
+  - apiGroups: ["span.dev"]
+    resources: ["segments/status", "segments/finalizers"]
+    verbs: ["get", "update", "patch"]
+  - apiGroups: [""]
+    resources: ["events"]
+    verbs: ["create", "patch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: span
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: span
+subjects:
+  - kind: ServiceAccount
+    name: span
+    namespace: span-system

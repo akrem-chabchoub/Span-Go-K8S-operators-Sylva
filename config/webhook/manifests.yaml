@@ -1,0 +1,22 @@
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingWebhookConfiguration
+metadata:
+  name: span-validating
+webhooks:
+  - name: vsegment.span.dev
+    admissionReviewVersions: ["v1"]
+    sideEffects: None
+    failurePolicy: Fail
+    timeoutSeconds: 10
+    clientConfig:
+      service:
+        name: span-webhook
+        namespace: span-system
+        path: /validate-span-dev-v1alpha1-segment
+        port: 443
+      caBundle: U1BBTl9DQV9QTEFDRUhPTERFUg==
+    rules:
+      - apiGroups: ["span.dev"]
+        apiVersions: ["v1alpha1"]
+        operations: ["CREATE", "UPDATE"]
+        resources: ["segments"]

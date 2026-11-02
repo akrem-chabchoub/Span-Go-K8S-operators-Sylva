@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: span-webhook
+  namespace: span-system
+spec:
+  selector:
+    app: span
+  ports:
+    - name: https
+      port: 443
+      targetPort: webhook

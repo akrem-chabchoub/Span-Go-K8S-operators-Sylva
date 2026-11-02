@@ -1,0 +1,18 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: span
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: http://host.docker.internal:8088/span.git
+    targetRevision: main
+    path: .
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: span-system
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true

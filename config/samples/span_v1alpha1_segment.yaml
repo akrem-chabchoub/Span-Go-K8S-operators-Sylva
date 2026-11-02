@@ -1,0 +1,9 @@
+apiVersion: span.dev/v1alpha1
+kind: Segment
+metadata:
+  name: lab
+  namespace: default
+spec:
+  cidr: 10.20.30.0/24
+  gateway: 10.20.30.1
+  cluster: lab

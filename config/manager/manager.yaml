@@ -1,0 +1,73 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: span
+  namespace: span-system
+  labels:
+    app: span
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: span
+  template:
+    metadata:
+      labels:
+        app: span
+    spec:
+      serviceAccountName: span
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65532
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: span
+          image: span:dev
+          imagePullPolicy: IfNotPresent
+          args:
+            - --enable-webhook=true
+            - --leader-elect=false
+            - --helper-endpoints=http://span-helper.span-system.svc:8080
+          ports:
+            - name: webhook
+              containerPort: 9443
+            - name: health
+              containerPort: 8081
+            - name: metrics
+              containerPort: 8080
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: health
+            initialDelaySeconds: 2
+            periodSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: health
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          resources:
+            requests:
+              cpu: 20m
+              memory: 64Mi
+            limits:
+              memory: 256Mi
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+            - name: cert
+              mountPath: /tmp/k8s-webhook-server/serving-certs
+              readOnly: true
+      volumes:
+        - name: tmp
+          emptyDir: {}
+        - name: cert
+          secret:
+            secretName: webhook-server-cert

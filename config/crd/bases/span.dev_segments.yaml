@@ -1,0 +1,122 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: segments.span.dev
+spec:
+  group: span.dev
+  scope: Namespaced
+  names:
+    kind: Segment
+    listKind: SegmentList
+    plural: segments
+    singular: segment
+    shortNames:
+      - seg
+  versions:
+    - name: v1alpha1
+      served: true
+      storage: true
+      subresources:
+        status: {}
+      additionalPrinterColumns:
+        - name: CIDR
+          type: string
+          jsonPath: .spec.cidr
+        - name: Cluster
+          type: string
+          jsonPath: .spec.cluster
+        - name: Ready
+          type: string
+          jsonPath: .status.conditions[?(@.type=="Ready")].status
+        - name: Applied
+          type: string
+          jsonPath: .status.conditions[?(@.type=="Applied")].status
+      schema:
+        openAPIV3Schema:
+          type: object
+          properties:
+            spec:
+              type: object
+              required: [cidr, gateway, cluster]
+              properties:
+                cidr:
+                  type: string
+                  minLength: 1
+                gateway:
+                  type: string
+                  minLength: 1
+                cluster:
+                  type: string
+                  minLength: 1
+                  maxLength: 63
+                  pattern: '^[a-z0-9]([-a-z0-9]*[a-z0-9])?$'
+                vlan:
+                  type: integer
+                  minimum: 1
+                  maximum: 4094
+                link:
+                  type: string
+                  minLength: 1
+                  maxLength: 15
+                  pattern: '^[A-Za-z][A-Za-z0-9_.-]*$'
+            status:
+              type: object
+              properties:
+                observedGeneration:
+                  type: integer
+                  format: int64
+                connectedRoute:
+                  type: string
+                conditions:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      type:
+                        type: string
+                      status:
+                        type: string
+                      reason:
+                        type: string
+                      message:
+                        type: string
+                      lastTransitionTime:
+                        type: string
+                        format: date-time
+                      observedGeneration:
+                        type: integer
+                        format: int64
+                plan:
+                  type: array
+                  items:
+                    type: object
+                    required: [action]
+                    properties:
+                      action:
+                        type: string
+                      address:
+                        type: string
+                      vlan:
+                        type: integer
+                        minimum: 0
+                        maximum: 4094
+                observed:
+                  type: array
+                  items:
+                    type: object
+                    required: [endpoint]
+                    properties:
+                      endpoint:
+                        type: string
+                      link:
+                        type: string
+                      addresses:
+                        type: array
+                        items:
+                          type: string
+                      routes:
+                        type: array
+                        items:
+                          type: string
+                      error:
+                        type: string

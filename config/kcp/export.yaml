@@ -1,0 +1,85 @@
+apiVersion: apis.kcp.io/v1alpha1
+kind: APIResourceSchema
+metadata:
+  name: v1alpha1.segments.span.dev
+spec:
+  group: span.dev
+  names:
+    kind: Segment
+    listKind: SegmentList
+    plural: segments
+    singular: segment
+    shortNames: ["seg"]
+  scope: Namespaced
+  versions:
+    - name: v1alpha1
+      served: true
+      storage: true
+      subresources:
+        status: {}
+      schema:
+        type: object
+        properties:
+          spec:
+            type: object
+            required: [cidr, gateway, cluster]
+            properties:
+              cidr:
+                type: string
+              gateway:
+                type: string
+              cluster:
+                type: string
+              vlan:
+                type: integer
+                minimum: 1
+                maximum: 4094
+              link:
+                type: string
+          status:
+            type: object
+            properties:
+              observedGeneration:
+                type: integer
+              connectedRoute:
+                type: string
+              conditions:
+                type: array
+                items:
+                  type: object
+                  x-kubernetes-preserve-unknown-fields: true
+              plan:
+                type: array
+                items:
+                  type: object
+                  x-kubernetes-preserve-unknown-fields: true
+              observed:
+                type: array
+                items:
+                  type: object
+                  x-kubernetes-preserve-unknown-fields: true
+---
+apiVersion: apis.kcp.io/v1alpha1
+kind: APIExport
+metadata:
+  name: span
+spec:
+  latestResourceSchemas:
+    - v1alpha1.segments.span.dev
+---
+apiVersion: apis.kcp.io/v1alpha1
+kind: APIExportEndpointSlice
+metadata:
+  name: span
+spec:
+  export:
+    name: span
+---
+apiVersion: tenancy.kcp.io/v1alpha1
+kind: Workspace
+metadata:
+  name: campus
+spec:
+  type:
+    name: universal
+    path: root
